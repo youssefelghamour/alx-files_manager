@@ -14,6 +14,7 @@ class RedisClient {
     // Handle Redis client errors
     this.client.on('error', (error) => {
       console.error(`Redis client error: ${error.message}`);
+      this.connected = false;
     });
 
     // Update the connected status on successful connection
