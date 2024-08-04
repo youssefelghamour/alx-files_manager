@@ -12,6 +12,8 @@ class DBClient {
 
     this.client.connect().then(() => {
       this.db = this.client.db(database);
+      this.usersCollection = this.db.collection('users');
+      this.filesCollection = this.db.collection('files');
       console.log('Connected to MongoDB');
     }).catch((err) => {
       console.error(`Failed to connect to MongoDB: ${err.message}`);
