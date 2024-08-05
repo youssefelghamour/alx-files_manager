@@ -93,45 +93,91 @@ class FilesController {
   }
 
   static async getShow(request, response) {
-    const token = request.headers['x-token'];
+    try {
+      // Get the token from request headers
+      const token = request.headers['x-token'];
 
-    const userId = await redisClient.get(`auth_${token}`);
+      // Check if token is provided
+      if (!token) {
+        return response.status(401).json({ error: 'No token provided' });
+      }
 
-    if (!userId) {
-      return response.status(401).json({ error: 'Unauthorized' });
+      // Retrieve user ID from Redis using the token
+      const userId = await redisClient.get(`auth_${token}`);
+
+      // Check if user ID is not found
+      if (!userId) {
+        return response.status(401).json({ error: 'Unauthorized' });
+      }
+
+      // Extract the `id` from the request parameters
+      const { id } = request.params;
+
+      // Validate `id` format
+      if (!ObjectId.isValid(id)) {
+        return response.status(400).json({ error: 'Invalid ID format' });
+      }
+
+      // Retrieve the file from the database
+      const file = await dbClient.filesCollection.findOne({ _id: new ObjectId(id), userId: new ObjectId(userId) });
+
+      // Check if file exists
+      if (!file) {
+        return response.status(404).json({ error: 'File not found' });
+      }
+
+      // Send the file data in the response
+      return response.status(200).json(file);
+    } catch (error) {
+      console.error('Error in getShow:', error);
+      return response.status(500).json({ error: 'Internal Server Error' });
     }
-
-    const { id } = request.params;
-    const file = await dbClient.filesCollection.findOne({ _id: new ObjectId(id), userId: userId });
-    if (!file) {
-      return response.status(404).json({ error: 'Not found' });
-    }
-
-    return response.status(200).json(file);
   }
 
   static async getIndex(request, response) {
-    const token = request.headers['x-token'];
+    try {
+      // Get the token from request headers
+      const token = request.headers['x-token'];
 
-    const userId = await redisClient.get(`auth_${token}`);
+      // Check if token is provided
+      if (!token) {
+        return response.status(401).json({ error: 'No token provided' });
+      }
 
-    if (!userId) {
-      return response.status(401).json({ error: 'Unauthorized' });
+      // Retrieve user ID from Redis using the token
+      const userId = await redisClient.get(`auth_${token}`);
+
+      // Check if user ID is not found
+      if (!userId) {
+        return response.status(401).json({ error: 'Unauthorized' });
+      }
+
+      // Extract query parameters
+      const { parentId = 0, page = 0 } = request.query;
+      const pageNumber = parseInt(page, 10);
+      const skip = pageNumber * 20;
+      const limit = 20;
+
+      // Validate `parentId` to be a valid ObjectId if it's not 0
+      const parentObjectId = parentId !== '0' ? new ObjectId(parentId) : parentId;
+
+      // Aggregate pipeline for pagination
+      const pipeline = [
+        { $match: { userId: new ObjectId(userId), parentId: parentObjectId } },
+        { $sort: { name: 1 } }, // Optional: Sort by name or other field
+        { $skip: skip },
+        { $limit: limit }
+      ];
+
+      // Retrieve files from the database
+      const files = await dbClient.filesCollection.aggregate(pipeline).toArray();
+
+      // Send the file list in the response
+      return response.status(200).json(files);
+    } catch (error) {
+      console.error('Error in getIndex:', error);
+      return response.status(500).json({ error: 'Internal Server Error' });
     }
-
-    const { parentId = 0, page = 0 } = request.query;
-    const pageNumber = parseInt(page, 10);
-    const skip = pageNumber * 20;
-    const limit = 20;
-
-    const parentObjectId = parentId !== '0' ? new ObjectId(parentId) : parentId;
-    const pipeline = [
-      { $match: { userId: new ObjectId(userId), parentId: parentObjectId } },
-      { $skip: skip },
-      { $limit: limit },
-    ];
-    const files = await dbClient.filesCollection.aggregate(pipeline).toArray();
-    return response.status(200).json(files);
   }
 }
 
