@@ -24,4 +24,8 @@ router.get('/users/me', UsersController.getMe);
 // Create a new file by a user
 router.post('/files', FilesController.postUpload);
 
+router.get('/files/:id', FilesController.getShow);
+
+router.get('/files', FilesController.getIndex);
+
 export default router;
