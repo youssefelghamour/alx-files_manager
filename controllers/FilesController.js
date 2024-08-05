@@ -127,7 +127,6 @@ class FilesController {
     const parentObjectId = parentId !== '0' ? new ObjectId(parentId) : parentId;
     const pipeline = [
       { $match: { userId: new ObjectId(userId), parentId: parentObjectId } },
-      { $sort: { name: 1 } },
       { $skip: skip },
       { $limit: limit },
     ];
