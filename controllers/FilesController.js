@@ -93,7 +93,6 @@ class FilesController {
   }
 
   static async getShow(request, response) {
-
     const token = request.headers['x-token'];
 
     const userId = await redisClient.get(`auth_${token}`);
@@ -102,17 +101,16 @@ class FilesController {
       return response.status(401).json({ error: 'Unauthorized' });
     }
 
-   const { id } = request.params;
-   const file = await dbClient.filesCollection.findOne({ _id: new ObjectId(id) });
-   if (!file) {
-     return response.status(404).json({ error: 'Not found' });
-   }
+    const { id } = request.params;
+    const file = await dbClient.filesCollection.findOne({ _id: new ObjectId(id) });
+    if (!file) {
+      return response.status(404).json({ error: 'Not found' });
+    }
 
-   return response.status(200).json(file);
+    return response.status(200).json(file);
   }
 
   static async getIndex(request, response) {
-
     const token = request.headers['x-token'];
 
     const userId = await redisClient.get(`auth_${token}`);
@@ -129,9 +127,9 @@ class FilesController {
     const parentObjectId = parentId !== '0' ? new ObjectId(parentId) : parentId;
     const pipeline = [
       { $match: { userId: new ObjectId(userId), parentId: parentObjectId } },
-      { $sort: { name: 1 } }, // Optional: Sort by name or other field
+      { $sort: { name: 1 } },
       { $skip: skip },
-      { $limit: limit }
+      { $limit: limit },
     ];
     const files = await dbClient.filesCollection.aggregate(pipeline).toArray();
     return response.status(200).json(files);
