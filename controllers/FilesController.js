@@ -94,63 +94,76 @@ class FilesController {
     return response.status(201).json({ id: result.insertedId.toString(), ...newFile });
   }
 
-  static async getShow(request, response) {
-    const token = request.headers['x-token'];
+  static async getShow(req, res) {
+    const token = req.header('X-Token') || null;
+    if (!token) return res.status(401).send({ error: 'Unauthorized' });
 
-    const userId = await redisClient.get(`auth_${token}`);
+    const redisToken = await redisClient.get(`auth_${token}`);
+    if (!redisToken) return res.status(401).send({ error: 'Unauthorized' });
 
-    if (!userId) {
-      return response.status(401).json({ error: 'Unauthorized' });
-    }
+    const user = await dbClient.db
+      .collection('users')
+      .findOne({ _id: ObjectId(redisToken) });
+    if (!user) return res.status(401).send({ error: 'Unauthorized' });
 
-    const user = await dbClient.db.collection('users').findOne({ _id: new ObjectId(userId) });
-    if (!user) {
-      return response.status(401).json({ error: 'Unauthorized' });
-    }
+    const idFile = req.params.id || '';
 
-    const fileId = request.params.id;
-    const fileObjectId = new ObjectId(fileId);
-    const file = await dbClient.db
+    const fileDocument = await dbClient.db
       .collection('files')
-      .findOne({ _id: fileObjectId, userId: user._id });
-    if (!file) {
-      return response.status(404).json({ error: 'Not found' });
-    }
+      .findOne({ _id: ObjectId(idFile), userId: user._id });
+    if (!fileDocument) return res.status(404).send({ error: 'Not found' });
 
-    return response.json(file);
+    return res.send({
+      id: fileDocument._id,
+      userId: fileDocument.userId,
+      name: fileDocument.name,
+      type: fileDocument.type,
+      isPublic: fileDocument.isPublic,
+      parentId: fileDocument.parentId,
+    });
   }
 
-  static async getIndex(request, response) {
-    const token = request.headers['x-token'];
+  static async getIndex(req, res) {
+    const token = req.header('X-Token') || null;
+    if (!token) return res.status(401).send({ error: 'Unauthorized' });
 
-    const userId = await redisClient.get(`auth_${token}`);
+    const redisToken = await redisClient.get(`auth_${token}`);
+    if (!redisToken) return res.status(401).send({ error: 'Unauthorized' });
 
-    if (!userId) {
-      return response.status(401).json({ error: 'Unauthorized' });
-    }
+    const user = await dbClient.db
+      .collection('users')
+      .findOne({ _id: ObjectId(redisToken) });
+    if (!user) return res.status(401).send({ error: 'Unauthorized' });
 
-    const user = await dbClient.db.collection('users').findOne({ _id: new ObjectId(userId) });
-    if (!user) {
-      return response.status(401).json({ error: 'Unauthorized' });
-    }
+    const parentId = req.query.parentId || 0;
 
-    const parentId = parseInt(request.query.parentId, 10) || 0;
-    const pagination = parseInt(request.query.page, 10) || 0;
+    const pagination = req.query.page || 0;
 
-    const aggregationMatch = { parentId };
-    const aggregateData = [
+    const aggregationMatch = { $and: [{ parentId }] };
+    let aggregateData = [
       { $match: aggregationMatch },
       { $skip: pagination * 20 },
       { $limit: 20 },
     ];
+    if (parentId === 0) aggregateData = [{ $skip: pagination * 20 }, { $limit: 20 }];
 
-    const files = await dbClient.db.collection('files').aggregate(aggregateData);
+    const files = await dbClient.db
+      .collection('files')
+      .aggregate(aggregateData);
     const filesArray = [];
     await files.forEach((item) => {
-      filesArray.push(item);
+      const fileItem = {
+        id: item._id,
+        userId: item.userId,
+        name: item.name,
+        type: item.type,
+        isPublic: item.isPublic,
+        parentId: item.parentId,
+      };
+      filesArray.push(fileItem);
     });
 
-    return response.json(filesArray);
+    return res.send(filesArray);
   }
 
   static async putPublish(req, res) {
