@@ -192,7 +192,7 @@ class FilesController {
       .collection('files')
       .findOne({ _id: ObjectId(idFile), userId: user._id });
 
-    return res.send({
+    return res.status(200).json({
       id: fileDocument._id,
       userId: fileDocument.userId,
       name: fileDocument.name,
@@ -231,7 +231,7 @@ class FilesController {
       .collection('files')
       .findOne({ _id: ObjectId(idFile), userId: user._id });
 
-    return res.send({
+    return res.status(200).json({
       id: fileDocument._id,
       userId: fileDocument.userId,
       name: fileDocument.name,
