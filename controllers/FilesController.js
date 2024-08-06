@@ -113,14 +113,7 @@ class FilesController {
       return response.status(404).json({ error: 'Not found' });
     }
 
-    return response.json({
-      id: file._id,
-      userId: file.userId,
-      name: file.name,
-      type: file.type,
-      isPublic: file.isPublic,
-      parentId: file.parentId,
-    });
+    return response.json(file);
   }
 
   static async getIndex(request, response) {
@@ -150,15 +143,7 @@ class FilesController {
     const files = await dbClient.db.collection('files').aggregate(aggregateData);
     const filesArray = [];
     await files.forEach((item) => {
-      const fileItem = {
-        id: item._id,
-        userId: item.userId,
-        name: item.name,
-        type: item.type,
-        isPublic: item.isPublic,
-        parentId: item.parentId,
-      };
-      filesArray.push(fileItem);
+      filesArray.push(item);
     });
 
     return response.json(filesArray);
