@@ -187,7 +187,7 @@ class FilesController {
 
     await dbClient.db
       .collection('files')
-      .update({ _id: ObjectId(idFile) }, { $set: { isPublic: true } });
+      .updateOne({ _id: ObjectId(idFile) }, { $set: { isPublic: true } });
     fileDocument = await dbClient.db
       .collection('files')
       .findOne({ _id: ObjectId(idFile), userId: user._id });
@@ -223,7 +223,7 @@ class FilesController {
 
     await dbClient.db
       .collection('files')
-      .update(
+      .updateOne(
         { _id: ObjectId(idFile), userId: user._id },
         { $set: { isPublic: false } },
       );
