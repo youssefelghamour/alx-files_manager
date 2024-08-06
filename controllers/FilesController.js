@@ -106,9 +106,9 @@ class FilesController {
       return response.status(401).json({ error: 'Unauthorized' });
     }
 
-    const fileId = request.params.id || '';
-    const file = await dbClient.db
-      .collection('files').findOne({ _id: new ObjectId(fileId), userId: user._id });
+    const fileId = request.params.id;
+    const fileObjectId = new ObjectId(fileId);
+    const file = await dbClient.db.collection('files').findOne({ _id: fileObjectId });
     if (!file) {
       return response.status(404).json({ error: 'Not found' });
     }
@@ -137,18 +137,17 @@ class FilesController {
       return response.status(401).json({ error: 'Unauthorized' });
     }
 
-    const parentId = request.query.parentId || '';
-    const pagination = request.query.page || '';
-    const aggregationMatch = { $and: [{ parentId }] };
-    let aggregateData = [
+    const parentId = parseInt(request.query.parentId, 10) || 0;
+    const pagination = parseInt(request.query.page, 10) || 0;
+
+    const aggregationMatch = { parentId };
+    const aggregateData = [
       { $match: aggregationMatch },
       { $skip: pagination * 20 },
       { $limit: 20 },
     ];
-    if (parentId === 0) aggregateData = [{ $skip: pagination * 20 }, { $limit: 20 }];
-    const files = await dbClient.db
-      .collection('files')
-      .aggregate(aggregateData);
+
+    const files = await dbClient.db.collection('files').aggregate(aggregateData);
     const filesArray = [];
     await files.forEach((item) => {
       const fileItem = {
