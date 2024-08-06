@@ -95,45 +95,38 @@ class FilesController {
   }
 
   static async getShow(req, res) {
-    const token = req.header('X-Token') || null;
-    if (!token) return res.status(401).send({ error: 'Unauthorized' });
+    const token = req.header('X-Token');
+    if (!token) return res.status(401).json({ error: 'Unauthorized' });
 
     const redisToken = await redisClient.get(`auth_${token}`);
-    if (!redisToken) return res.status(401).send({ error: 'Unauthorized' });
+    if (!redisToken) return res.status(401).json({ error: 'Unauthorized' });
 
     const user = await dbClient.db
       .collection('users')
       .findOne({ _id: ObjectId(redisToken) });
-    if (!user) return res.status(401).send({ error: 'Unauthorized' });
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
-    const idFile = req.params.id || '';
+    const idFile = req.params.id;
 
     const fileDocument = await dbClient.db
       .collection('files')
       .findOne({ _id: ObjectId(idFile), userId: user._id });
-    if (!fileDocument) return res.status(404).send({ error: 'Not found' });
+    if (!fileDocument) return res.status(404).json({ error: 'Not found' });
 
-    return res.send({
-      id: fileDocument._id,
-      userId: fileDocument.userId,
-      name: fileDocument.name,
-      type: fileDocument.type,
-      isPublic: fileDocument.isPublic,
-      parentId: fileDocument.parentId,
-    });
+    return res.json(fileDocument);
   }
 
   static async getIndex(req, res) {
-    const token = req.header('X-Token') || null;
-    if (!token) return res.status(401).send({ error: 'Unauthorized' });
+    const token = req.header('X-Token');
+    if (!token) return res.status(401).json({ error: 'Unauthorized' });
 
     const redisToken = await redisClient.get(`auth_${token}`);
-    if (!redisToken) return res.status(401).send({ error: 'Unauthorized' });
+    if (!redisToken) return res.status(401).json({ error: 'Unauthorized' });
 
     const user = await dbClient.db
       .collection('users')
       .findOne({ _id: ObjectId(redisToken) });
-    if (!user) return res.status(401).send({ error: 'Unauthorized' });
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
     const parentId = req.query.parentId || 0;
 
@@ -152,15 +145,7 @@ class FilesController {
       .aggregate(aggregateData);
     const filesArray = [];
     await files.forEach((item) => {
-      const fileItem = {
-        id: item._id,
-        userId: item.userId,
-        name: item.name,
-        type: item.type,
-        isPublic: item.isPublic,
-        parentId: item.parentId,
-      };
-      filesArray.push(fileItem);
+      filesArray.push(item);
     });
 
     return res.send(filesArray);
