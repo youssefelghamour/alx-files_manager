@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import dbClient from '../utils/db';
 import redisClient from '../utils/redis';
+
 const mime = require('mime-types');
 
 class FilesController {
