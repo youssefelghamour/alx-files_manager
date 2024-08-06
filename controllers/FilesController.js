@@ -98,16 +98,29 @@ class FilesController {
     const userId = await redisClient.get(`auth_${token}`);
 
     if (!userId) {
-      return response.status(401).json({ error: 'Unauthorized' });
+      return response.status(401).send({ error: 'Unauthorized' });
     }
 
-    const { id } = request.params;
-    const file = await dbClient.filesCollection.findOne({ _id: new ObjectId(id) });
+    const user = await dbClient.db.collection('users').findOne({ _id: new ObjectId(userId) });
+    if (!user) {
+      return response.status(401).send({ error: 'Unauthorized' });
+    }
+
+    const fileId = request.params.id || '';
+    const file = await dbClient.db
+      .collection('files').findOnde({ _id: new ObjectId(fileId), userId: user._id });
     if (!file) {
-      return response.status(404).json({ error: 'Not found' });
+      return response.status(404).send({ error: 'Not found' });
     }
 
-    return response.status(200).json(file);
+    return response.send({
+      id: file._id,
+      userId: file.userId,
+      name: file.name,
+      type: file.type,
+      isPublic: file.isPublic,
+      parentId: file.parentId,
+    });
   }
 
   static async getIndex(request, response) {
@@ -116,22 +129,40 @@ class FilesController {
     const userId = await redisClient.get(`auth_${token}`);
 
     if (!userId) {
-      return response.status(401).json({ error: 'Unauthorized' });
+      return response.status(401).send({ error: 'Unauthorized' });
     }
 
-    const { parentId = 0, page = 0 } = request.query;
-    const pageNumber = parseInt(page, 10);
-    const skip = pageNumber * 20;
-    const limit = 20;
+    const user = await dbClient.db.collection('users').findOne({ _id: new ObjectId(userId) });
+    if (!user) {
+      return response.status(401).send({ error: 'Unauthorized' });
+    }
 
-    const parentObjectId = parentId !== '0' ? new ObjectId(parentId) : parentId;
-    const pipeline = [
-      { $match: { userId: new ObjectId(userId), parentId: parentObjectId } },
-      { $skip: skip },
-      { $limit: limit },
+    const parentId = request.query.parentId || '';
+    const pagination = request.query.page || '';
+    const aggregationMatch = { $and: [{ parentId }] };
+    let aggregateData = [
+      { $match: aggregationMatch },
+      { $skip: pagination * 20 },
+      { $limit: 20 },
     ];
-    const files = await dbClient.filesCollection.aggregate(pipeline).toArray();
-    return response.status(200).json(files);
+    if (parentId === 0) aggregateData = [{ $skip: pagination * 20 }, { $limit: 20 }];
+    const files = await dbClient.db
+      .collection('files')
+      .aggregate(aggregateData);
+    const filesArray = [];
+    await files.forEach((item) => {
+      const fileItem = {
+        id: item._id,
+        userId: item.userId,
+        name: item.name,
+        type: item.type,
+        isPublic: item.isPublic,
+        parentId: item.parentId,
+      };
+      filesArray.push(fileItem);
+    });
+
+    return response.send(filesArray);
   }
 }
 
