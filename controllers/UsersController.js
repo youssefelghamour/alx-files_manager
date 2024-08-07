@@ -3,8 +3,11 @@ import { ObjectId } from 'mongodb';
 import dbClient from '../utils/db';
 import redisClient from '../utils/redis';
 
+const Bull = require('bull');
+
 class UsersController {
   static async postNew(req, res) {
+    const userQueue = new Bull('userQueue');
     console.log(req.body);
     const { email, password } = req.body;
 
@@ -27,6 +30,7 @@ class UsersController {
     // create and insert the new user
     const result = await dbClient.usersCollection.insertOne({ email, password: hashedPassword });
     const newUser = result.insertedId;
+    userQueue.add({ userId: newUser });
 
     // return the new user
     return res.status(201).json({ id: newUser, email });

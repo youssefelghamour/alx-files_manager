@@ -6,11 +6,13 @@ import dbClient from '../utils/db';
 import redisClient from '../utils/redis';
 
 const mime = require('mime-types');
+const Bull = require('bull');
 
 class FilesController {
   static async postUpload(request, response) {
     // Get the token from request headers
     const token = request.headers['x-token'];
+    const fileQueue = new Bull('fileQueue');
 
     // Retrieve user ID from Redis using the token
     const userId = await redisClient.get(`auth_${token}`);
@@ -89,6 +91,10 @@ class FilesController {
 
     // Insert new file data into the database
     const result = await dbClient.filesCollection.insertOne(newFile);
+    fileQueue.add({
+      userId: newFile.userId,
+      fileId: newFile._id,
+    });
 
     // Respond with the created file data
     return response.status(201).json({ id: result.insertedId.toString(), ...newFile });
