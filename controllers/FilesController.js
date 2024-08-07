@@ -97,7 +97,15 @@ class FilesController {
     });
 
     // Respond with the created file data
-    return response.status(201).json({ id: result.insertedId.toString(), ...newFile });
+    // return response.status(201).json({ id: result.insertedId.toString(), ...newFile });
+    return response.status(201).json({
+      id: result.insertedId.toString(),
+      userId: newFile.userId,
+      name: newFile.name,
+      type: newFile.type,
+      isPublic: newFile.isPublic,
+      parentId: newFile.parentId,
+    });
   }
 
   static async getShow(req, res) {
