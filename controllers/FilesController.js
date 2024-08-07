@@ -12,6 +12,7 @@ class FilesController {
   static async postUpload(request, response) {
     // Get the token from request headers
     const token = request.headers['x-token'];
+    // create a fileQueue for thumbnail worker
     const fileQueue = new Bull('fileQueue');
 
     // Retrieve user ID from Redis using the token
